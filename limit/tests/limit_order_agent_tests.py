@@ -52,5 +52,19 @@ class LimitOrderAgentTest(unittest.TestCase):
         self.assertEqual(len(self.ec.order_data), 0)
         self.assertEqual(self.ec.order_data, [])
 
+    def test_no_order_when_price_not_met(self):
+        self.limit_order_agent.add_order('buy', 'IBM', 1000, 100)
+        self.limit_order_agent.on_price_tick('IBM', 101)
+        self.assertEqual(len(self.limit_order_agent.order_data), 1)
+        self.assertEqual(len(self.ec.order_data), 0)
+
+    def test_exception_handling(self):
+        self.limit_order_agent.add_order('buy', 'IBM', -1000, 100)
+        self.limit_order_agent.on_price_tick('IBM', 99)
+        self.assertEqual(len(self.limit_order_agent.order_data), 1)
+        with self.assertRaises(ExecutionException) as context:
+            self.assertEqual(len(self.ec.order_data), 0)
+        breakpoint()
+
 if __name__ == '__main__':
     unittest.main()
