@@ -25,7 +25,6 @@ class LimitOrderAgent(PriceListener):
                 elif (order['order_type'] == 'buy' and price <= order['limit']):
                     self.ec.buy(product_id, order['amount'])
                     self.order_data.remove(order)
-
             except ExecutionException as e:
                 print(str(e))
 

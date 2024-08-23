@@ -1,6 +1,8 @@
 from trading_framework.execution_client import ExecutionException
 from limit.limit_order_agent import LimitOrderAgent
+from contextlib import redirect_stdout
 import unittest
+import io
 
 class MockExecutionClient:
     def __init__(self):
@@ -38,21 +40,21 @@ class LimitOrderAgentTest(unittest.TestCase):
         self.assertEqual(self.limit_order_agent.order_data[0]['amount'], 1000)
         self.assertEqual(self.limit_order_agent.order_data[0]['limit'], 100)
 
-    def test_execute_order_type_buy(self):
+    def test_order_type_buy(self):
         self.limit_order_agent.add_order('buy', 'IBM', 1000, 100)
         self.limit_order_agent.on_price_tick('IBM', 100)
         self.assertEqual(len(self.limit_order_agent.order_data), 0)
         self.assertEqual(len(self.ec.order_data), 1)
         self.assertEqual(self.ec.order_data[0], ('buy', 'IBM', 1000))
 
-    def test_execute_order_type_sell(self):
+    def test_order_type_sell(self):
         self.limit_order_agent.add_order('sell', 'IBM', 1000, 110)
         self.limit_order_agent.on_price_tick('IBM', 110)
         self.assertEqual(len(self.limit_order_agent.order_data), 1)
         self.assertEqual(len(self.ec.order_data), 0)
         self.assertEqual(self.ec.order_data, [])
 
-    def test_no_order_when_price_not_met(self):
+    def test_order_when_price_does_not_met(self):
         self.limit_order_agent.add_order('buy', 'IBM', 1000, 100)
         self.limit_order_agent.on_price_tick('IBM', 101)
         self.assertEqual(len(self.limit_order_agent.order_data), 1)
@@ -60,11 +62,12 @@ class LimitOrderAgentTest(unittest.TestCase):
 
     def test_exception_handling(self):
         self.limit_order_agent.add_order('buy', 'IBM', -1000, 100)
-        self.limit_order_agent.on_price_tick('IBM', 99)
+        f = io.StringIO()
+        with redirect_stdout(f):
+            self.limit_order_agent.on_price_tick('IBM', 99)
+        self.assertRegex(f.getvalue(), "Amount should be positive")
         self.assertEqual(len(self.limit_order_agent.order_data), 1)
-        with self.assertRaises(ExecutionException) as context:
-            self.assertEqual(len(self.ec.order_data), 0)
-        breakpoint()
+        self.assertEqual(len(self.ec.order_data), 0)
 
 if __name__ == '__main__':
     unittest.main()
